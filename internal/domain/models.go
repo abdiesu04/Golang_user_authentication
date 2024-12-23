@@ -1,25 +1,15 @@
-package config
+package domain
 
-import (
-	"github.com/spf13/viper"
-)
+import "time"
 
-type Config struct {
-	ServerPort  string
-	DatabaseURL string
-	JWTSecret   string
+type User struct {
+	ID        int64     `json:"id"`
+	Username  string    `json:"username"`
+	Password  string    `json:"password"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
-func LoadConfig() (*Config, error) {
-	viper.SetConfigFile(".env")
-
-	if err := viper.ReadInConfig(); err != nil {
-		return nil, err
-	}
-
-	return &Config{
-		ServerPort:  viper.GetString("SERVER_PORT"),
-		DatabaseURL: viper.GetString("DATABASE_URL"),
-		JWTSecret:   viper.GetString("JWT_SECRET"),
-	}, nil
+type Token struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"user/internal/domain"
 	"user/internal/repository"
-
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -42,5 +41,52 @@ func (u *AuthUsecase) Login(username, password string) (domain.Token, error) {
 		return domain.Token{}, errors.New("invalid credentials")
 	}
 
-	return u.jwtUtils.GenerateToken(user.ID)
+	token, err := u.jwtUtils.GenerateToken(user.ID)
+	if err != nil {
+		return domain.Token{}, err
+	}
+
+	// Save refresh token in the database
+	if err := u.userRepo.SaveRefreshToken(user.ID, token.RefreshToken); err != nil {
+		return domain.Token{}, err
+	}
+
+	return token, nil
+}
+
+func (u *AuthUsecase) RefreshToken(refreshToken string) (string, error) {
+	claims, err := u.jwtUtils.ValidateToken(refreshToken)
+	if err != nil {
+		return "", errors.New("invalid refresh token")
+	}
+
+	userID, ok := claims["user_id"].(float64)
+	if !ok {
+		return "", errors.New("invalid refresh token claims")
+	}
+
+	// Verify refresh token from database
+	storedToken, err := u.userRepo.GetRefreshToken(int64(userID))
+	if err != nil || storedToken != refreshToken {
+		return "", errors.New("refresh token mismatch or not found")
+	}
+
+	// Generate a new access token
+	newToken, err := u.jwtUtils.GenerateToken(int64(userID))
+	return newToken.AccessToken, err
+}
+
+func (u *AuthUsecase) Logout(refreshToken string) error {
+	claims, err := u.jwtUtils.ValidateToken(refreshToken)
+	if err != nil {
+		return errors.New("invalid refresh token")
+	}
+
+	userID, ok := claims["user_id"].(float64)
+	if !ok {
+		return errors.New("invalid refresh token claims")
+	}
+
+	// Invalidate refresh token
+	return u.userRepo.InvalidateRefreshToken(int64(userID))
 }

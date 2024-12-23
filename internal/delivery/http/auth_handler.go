@@ -45,5 +45,38 @@ func RegisterAuthRoutes(r *gin.Engine, authUsecase *usecase.AuthUsecase) {
 			}
 			c.JSON(http.StatusOK, tokens)
 		})
+
+		authGroup.POST("/refresh", func(c *gin.Context) {
+			var req struct {
+				RefreshToken string `json:"refresh_token"`
+			}
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+				return
+			}
+
+			newToken, err := authUsecase.RefreshToken(req.RefreshToken)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"access_token": newToken})
+		})
+
+		authGroup.POST("/logout", func(c *gin.Context) {
+			var req struct {
+				RefreshToken string `json:"refresh_token"`
+			}
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+				return
+			}
+
+			if err := authUsecase.Logout(req.RefreshToken); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+		})
 	}
 }

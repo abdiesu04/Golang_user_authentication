@@ -5,21 +5,25 @@ import (
 )
 
 type Config struct {
-	ServerPort  string
-	DatabaseURL string
-	JWTSecret   string
+	DatabaseURL string `mapstructure:"DATABASE_URL"`
+	ServerPort  int    `mapstructure:"SERVER_PORT"`
+	JWTSecret   string `mapstructure:"JWT_SECRET"`
 }
 
 func LoadConfig() (*Config, error) {
-	viper.SetConfigFile(".env")
+	viper.SetConfigName("config")
+	viper.SetConfigType("env")
+	viper.AddConfigPath(".")
+	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
 	}
 
-	return &Config{
-		ServerPort:  viper.GetString("SERVER_PORT"),
-		DatabaseURL: viper.GetString("DATABASE_URL"),
-		JWTSecret:   viper.GetString("JWT_SECRET"),
-	}, nil
+	var cfg Config
+	if err := viper.Unmarshal(&cfg); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
 }
